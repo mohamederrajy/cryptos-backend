@@ -8,6 +8,14 @@ const authMiddleware = require('../middleware/auth');
 
 router.post('/signup', [
     // Validation middleware
+    body('firstName')
+        .notEmpty()
+        .trim()
+        .withMessage('First name is required'),
+    body('lastName')
+        .notEmpty()
+        .trim()
+        .withMessage('Last name is required'),
     body('email').isEmail().normalizeEmail(),
     body('password')
         .isLength({ min: 8 })
@@ -25,7 +33,7 @@ router.post('/signup', [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { email, password } = req.body;
+        const { firstName, lastName, email, password } = req.body;
 
         // Check if user exists
         const existingUser = await User.findOne({ email });
@@ -39,6 +47,8 @@ router.post('/signup', [
 
         // Create new user
         const user = new User({
+            firstName,
+            lastName,
             email,
             password: hashedPassword
         });
@@ -47,7 +57,13 @@ router.post('/signup', [
 
         res.status(201).json({
             message: 'User created successfully',
-            userId: user._id
+            userId: user._id,
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email
+            }
         });
 
     } catch (error) {
@@ -103,6 +119,8 @@ router.post('/login', [
             refreshToken,
             user: {
                 id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 email: user.email
             }
         });

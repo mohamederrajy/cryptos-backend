@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -11,10 +12,14 @@ mongoose.set('strictQuery', false);
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/wallet', require('./routes/wallet'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/user', require('./routes/user'));
+app.use('/api/deposit', require('./routes/deposit'));
 
 // Connect to MongoDB with updated options
 mongoose.connect(process.env.MONGODB_URI)
