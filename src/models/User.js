@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema({
         trim: true,
         lowercase: true
     },
+    status: {
+        type: String,
+        enum: ['active', 'inactive', 'suspended'],
+        default: 'active'
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],
@@ -33,16 +38,13 @@ const userSchema = new mongoose.Schema({
     },
     wallet: {
         totalBalance: {
-            btc: { type: Number, default: 0 },
-            usd: { type: Number, default: 0 }
+            USDT: { type: Number, default: 0 }
         },
         assetBalance: {
-            btc: { type: Number, default: 0 },
-            usd: { type: Number, default: 0 }
+            USDT: { type: Number, default: 0 }
         },
         exchangeBalance: {
-            btc: { type: Number, default: 0 },
-            usd: { type: Number, default: 0 }
+            USDT: { type: Number, default: 0 }
         }
     },
     createdAt: {

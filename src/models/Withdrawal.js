@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const depositSchema = new mongoose.Schema({
+const withdrawalSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -12,8 +12,8 @@ const depositSchema = new mongoose.Schema({
     },
     currency: {
         type: String,
-        enum: ['USDT'],
         required: true,
+        enum: ['USDT'],
         uppercase: true
     },
     status: {
@@ -21,13 +21,13 @@ const depositSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
-    txHash: {
+    withdrawalAddress: {
         type: String,
         required: true
     },
-    depositAddress: {
-        type: String,
-        required: true
+    networkFee: {
+        type: Number,
+        default: 1 // USDT network fee
     },
     createdAt: {
         type: Date,
@@ -41,7 +41,11 @@ const depositSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         default: null
+    },
+    reason: {
+        type: String,
+        default: null
     }
 });
 
-module.exports = mongoose.model('Deposit', depositSchema); 
+module.exports = mongoose.model('Withdrawal', withdrawalSchema); 

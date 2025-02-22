@@ -20,6 +20,7 @@ app.use('/api/wallet', require('./routes/wallet'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/deposit', require('./routes/deposit'));
+app.use('/api/withdrawal', require('./routes/withdrawal'));
 
 // Connect to MongoDB with updated options
 mongoose.connect(process.env.MONGODB_URI)

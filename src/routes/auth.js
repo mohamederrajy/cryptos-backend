@@ -121,7 +121,10 @@ router.post('/login', [
                 id: user._id,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                email: user.email
+                email: user.email,
+                role: user.role,
+                status: user.status,
+                isAdmin: user.role === 'admin'
             }
         });
 
@@ -139,7 +142,12 @@ router.get('/me', authMiddleware, async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json(user);
+        
+        res.json({
+            ...user.toObject(),
+            isAdmin: user.role === 'admin',
+            status: user.status
+        });
     } catch (error) {
         console.error('Profile error:', error);
         res.status(500).json({ error: 'Server error' });

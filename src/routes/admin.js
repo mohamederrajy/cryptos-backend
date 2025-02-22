@@ -5,6 +5,8 @@ const adminMiddleware = require('../middleware/adminAuth');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+const Deposit = require('../models/Deposit');
+const Withdrawal = require('../models/Withdrawal');
 
 // Get all users (admin only)
 router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
@@ -106,21 +108,71 @@ router.post('/create-admin', authMiddleware, adminMiddleware, async (req, res) =
 // Get user statistics (admin only)
 router.get('/statistics', authMiddleware, adminMiddleware, async (req, res) => {
     try {
+        // Get total users count
         const totalUsers = await User.countDocuments();
-        const totalAdmins = await User.countDocuments({ role: 'admin' });
         
-        // Calculate total BTC and USD across all users
+        // Get total admins count
+        const totalAdmins = await User.countDocuments({ role: 'admin' });
+
+        // Get total USDT balance across all users
         const users = await User.find();
-        const totals = users.reduce((acc, user) => {
-            acc.btc += user.wallet.totalBalance.btc;
-            acc.usd += user.wallet.totalBalance.usd;
-            return acc;
-        }, { btc: 0, usd: 0 });
+        const totalUSDTBalance = users.reduce((total, user) => {
+            return total + (user.wallet.totalBalance.USDT || 0);
+        }, 0);
+
+        // Get pending deposits count and total amount
+        const pendingDeposits = await Deposit.find({ status: 'pending' });
+        const totalPendingDepositsAmount = pendingDeposits.reduce((total, deposit) => {
+            return total + deposit.amount;
+        }, 0);
+
+        // Get pending withdrawals count and total amount
+        const pendingWithdrawals = await Withdrawal.find({ status: 'pending' });
+        const totalPendingWithdrawalsAmount = pendingWithdrawals.reduce((total, withdrawal) => {
+            return total + withdrawal.amount;
+        }, 0);
+
+        // Get total completed deposits
+        const completedDeposits = await Deposit.find({ status: 'approved' });
+        const totalCompletedDepositsAmount = completedDeposits.reduce((total, deposit) => {
+            return total + deposit.amount;
+        }, 0);
+
+        // Get total completed withdrawals
+        const completedWithdrawals = await Withdrawal.find({ status: 'approved' });
+        const totalCompletedWithdrawalsAmount = completedWithdrawals.reduce((total, withdrawal) => {
+            return total + withdrawal.amount;
+        }, 0);
 
         res.json({
-            totalUsers,
-            totalAdmins,
-            totalBalance: totals
+            users: {
+                total: totalUsers,
+                admins: totalAdmins,
+                regularUsers: totalUsers - totalAdmins
+            },
+            balance: {
+                totalUSDT: totalUSDTBalance
+            },
+            pendingTransactions: {
+                deposits: {
+                    count: pendingDeposits.length,
+                    totalAmount: totalPendingDepositsAmount
+                },
+                withdrawals: {
+                    count: pendingWithdrawals.length,
+                    totalAmount: totalPendingWithdrawalsAmount
+                }
+            },
+            completedTransactions: {
+                deposits: {
+                    count: completedDeposits.length,
+                    totalAmount: totalCompletedDepositsAmount
+                },
+                withdrawals: {
+                    count: completedWithdrawals.length,
+                    totalAmount: totalCompletedWithdrawalsAmount
+                }
+            }
         });
     } catch (error) {
         console.error('Statistics error:', error);
@@ -152,6 +204,36 @@ router.get('/test', authMiddleware, adminMiddleware, async (req, res) => {
     } catch (error) {
         console.error('Test error:', error);
         res.status(500).json({ error: 'Test failed' });
+    }
+});
+
+// Delete all pending deposits
+router.delete('/pending-deposits', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const result = await Deposit.deleteMany({ status: 'pending' });
+        
+        res.json({
+            message: 'All pending deposits deleted successfully',
+            count: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Delete pending deposits error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Delete all pending withdrawals
+router.delete('/pending-withdrawals', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const result = await Withdrawal.deleteMany({ status: 'pending' });
+        
+        res.json({
+            message: 'All pending withdrawals deleted successfully',
+            count: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Delete pending withdrawals error:', error);
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
