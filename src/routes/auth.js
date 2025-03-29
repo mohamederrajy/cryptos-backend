@@ -74,12 +74,10 @@ router.post('/signup', [
 
 // Login route
 router.post('/login', [
-    // Validation middleware
     body('email').isEmail().normalizeEmail(),
     body('password').exists()
 ], async (req, res) => {
     try {
-        // Check for validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -124,7 +122,18 @@ router.post('/login', [
                 email: user.email,
                 role: user.role,
                 status: user.status,
-                isAdmin: user.role === 'admin'
+                isAdmin: user.role === 'admin',
+                wallet: {
+                    totalBalance: {
+                        USDT: user.wallet.totalBalance.USDT || 0
+                    },
+                    assetBalance: {
+                        USDT: user.wallet.assetBalance.USDT || 0
+                    },
+                    exchangeBalance: {
+                        USDT: user.wallet.exchangeBalance.USDT || 0
+                    }
+                }
             }
         });
 
@@ -134,19 +143,36 @@ router.post('/login', [
     }
 });
 
-// Protected route example - Get user profile
+// Get user profile
 router.get('/me', authMiddleware, async (req, res) => {
     try {
-        // Find user by ID (excluding password field)
         const user = await User.findById(req.userId).select('-password');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
         res.json({
-            ...user.toObject(),
-            isAdmin: user.role === 'admin',
-            status: user.status
+            profile: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role,
+                status: user.status,
+                isAdmin: user.role === 'admin',
+                createdAt: user.createdAt,
+                wallet: {
+                    totalBalance: {
+                        USDT: user.wallet.totalBalance.USDT || 0
+                    },
+                    assetBalance: {
+                        USDT: user.wallet.assetBalance.USDT || 0
+                    },
+                    exchangeBalance: {
+                        USDT: user.wallet.exchangeBalance.USDT || 0
+                    }
+                }
+            }
         });
     } catch (error) {
         console.error('Profile error:', error);
@@ -189,6 +215,58 @@ router.post('/refresh-token', async (req, res) => {
     } catch (error) {
         console.error('Refresh token error:', error);
         res.status(401).json({ error: 'Invalid token' });
+    }
+});
+
+// Update user profile
+router.put('/update-profile', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Update fields if provided
+        const { firstName, lastName, email } = req.body;
+        if (firstName) user.firstName = firstName;
+        if (lastName) user.lastName = lastName;
+        if (email) {
+            // Check if email is already taken
+            const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
+            if (existingUser) {
+                return res.status(400).json({ error: 'Email already in use' });
+            }
+            user.email = email;
+        }
+
+        await user.save();
+
+        res.json({
+            message: 'Profile updated successfully',
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role,
+                status: user.status,
+                isAdmin: user.role === 'admin',
+                wallet: {
+                    totalBalance: {
+                        USDT: user.wallet.totalBalance.USDT || 0
+                    },
+                    assetBalance: {
+                        USDT: user.wallet.assetBalance.USDT || 0
+                    },
+                    exchangeBalance: {
+                        USDT: user.wallet.exchangeBalance.USDT || 0
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: 'Server error' });
     }
 });
 

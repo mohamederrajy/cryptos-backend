@@ -11,12 +11,26 @@ const Withdrawal = require('../models/Withdrawal');
 // Get all users (admin only)
 router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        console.log('Admin ID:', req.userId);
-        const users = await User.find({});  // Get all users without any filtering
-        console.log('Found users:', users);
-        console.log('Total users found:', users.length);
-        console.log('Database connection status:', mongoose.connection.readyState);
-        res.json(users);
+        const users = await User.find({})
+            .select('-password')  // Exclude password
+            .sort({ createdAt: -1 });  // Sort by newest first
+
+        const formattedUsers = users.map(user => ({
+            id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            wallet: {
+                totalBalance: user.wallet.totalBalance,
+                assetBalance: user.wallet.assetBalance,
+                exchangeBalance: user.wallet.exchangeBalance
+            },
+            createdAt: user.createdAt
+        }));
+
+        res.json(formattedUsers);
     } catch (error) {
         console.error('Get users error:', error);
         res.status(500).json({ error: 'Server error' });
@@ -105,75 +119,81 @@ router.post('/create-admin', authMiddleware, adminMiddleware, async (req, res) =
     }
 });
 
-// Get user statistics (admin only)
+// Create a function for getting statistics
+async function getStatistics() {
+    // Get total users count
+    const totalUsers = await User.countDocuments();
+    
+    // Get total admins count
+    const totalAdmins = await User.countDocuments({ role: 'admin' });
+
+    // Get total USDT balance across all users
+    const users = await User.find();
+    const totalUSDTBalance = users.reduce((total, user) => {
+        return total + (user.wallet.totalBalance.USDT || 0);
+    }, 0);
+
+    // Get pending deposits count and total amount
+    const pendingDeposits = await Deposit.find({ status: 'pending' });
+    const totalPendingDepositsAmount = pendingDeposits.reduce((total, deposit) => {
+        return total + deposit.amount;
+    }, 0);
+
+    // Get pending withdrawals count and total amount
+    const pendingWithdrawals = await Withdrawal.find({ status: 'pending' });
+    const totalPendingWithdrawalsAmount = pendingWithdrawals.reduce((total, withdrawal) => {
+        return total + withdrawal.amount;
+    }, 0);
+
+    // Get total completed deposits
+    const completedDeposits = await Deposit.find({ status: 'approved' });
+    const totalCompletedDepositsAmount = completedDeposits.reduce((total, deposit) => {
+        return total + deposit.amount;
+    }, 0);
+
+    // Get total completed withdrawals
+    const completedWithdrawals = await Withdrawal.find({ status: 'approved' });
+    const totalCompletedWithdrawalsAmount = completedWithdrawals.reduce((total, withdrawal) => {
+        return total + withdrawal.amount;
+    }, 0);
+
+    return {
+        users: {
+            total: totalUsers,
+            admins: totalAdmins,
+            regularUsers: totalUsers - totalAdmins
+        },
+        balance: {
+            totalUSDT: totalUSDTBalance
+        },
+        pendingTransactions: {
+            deposits: {
+                count: pendingDeposits.length,
+                totalAmount: totalPendingDepositsAmount
+            },
+            withdrawals: {
+                count: pendingWithdrawals.length,
+                totalAmount: totalPendingWithdrawalsAmount
+            }
+        },
+        completedTransactions: {
+            deposits: {
+                count: completedDeposits.length,
+                totalAmount: totalCompletedDepositsAmount
+            },
+            withdrawals: {
+                count: completedWithdrawals.length,
+                totalAmount: totalCompletedWithdrawalsAmount
+            }
+        }
+    };
+}
+
+// Remove the root path handler and keep only the statistics endpoint
 router.get('/statistics', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        // Get total users count
-        const totalUsers = await User.countDocuments();
-        
-        // Get total admins count
-        const totalAdmins = await User.countDocuments({ role: 'admin' });
-
-        // Get total USDT balance across all users
-        const users = await User.find();
-        const totalUSDTBalance = users.reduce((total, user) => {
-            return total + (user.wallet.totalBalance.USDT || 0);
-        }, 0);
-
-        // Get pending deposits count and total amount
-        const pendingDeposits = await Deposit.find({ status: 'pending' });
-        const totalPendingDepositsAmount = pendingDeposits.reduce((total, deposit) => {
-            return total + deposit.amount;
-        }, 0);
-
-        // Get pending withdrawals count and total amount
-        const pendingWithdrawals = await Withdrawal.find({ status: 'pending' });
-        const totalPendingWithdrawalsAmount = pendingWithdrawals.reduce((total, withdrawal) => {
-            return total + withdrawal.amount;
-        }, 0);
-
-        // Get total completed deposits
-        const completedDeposits = await Deposit.find({ status: 'approved' });
-        const totalCompletedDepositsAmount = completedDeposits.reduce((total, deposit) => {
-            return total + deposit.amount;
-        }, 0);
-
-        // Get total completed withdrawals
-        const completedWithdrawals = await Withdrawal.find({ status: 'approved' });
-        const totalCompletedWithdrawalsAmount = completedWithdrawals.reduce((total, withdrawal) => {
-            return total + withdrawal.amount;
-        }, 0);
-
-        res.json({
-            users: {
-                total: totalUsers,
-                admins: totalAdmins,
-                regularUsers: totalUsers - totalAdmins
-            },
-            balance: {
-                totalUSDT: totalUSDTBalance
-            },
-            pendingTransactions: {
-                deposits: {
-                    count: pendingDeposits.length,
-                    totalAmount: totalPendingDepositsAmount
-                },
-                withdrawals: {
-                    count: pendingWithdrawals.length,
-                    totalAmount: totalPendingWithdrawalsAmount
-                }
-            },
-            completedTransactions: {
-                deposits: {
-                    count: completedDeposits.length,
-                    totalAmount: totalCompletedDepositsAmount
-                },
-                withdrawals: {
-                    count: completedWithdrawals.length,
-                    totalAmount: totalCompletedWithdrawalsAmount
-                }
-            }
-        });
+        const stats = await getStatistics();
+        res.json(stats);
     } catch (error) {
         console.error('Statistics error:', error);
         res.status(500).json({ error: 'Server error' });

@@ -11,8 +11,8 @@ async function createFirstAdmin() {
             tlsAllowInvalidCertificates: true
         });
 
-        const adminEmail = 'admin@cryptoso.com';
-        const adminPassword = 'Admin123!@#';
+        const adminEmail = 'admin@coinsna.com';
+        const adminPassword = 'admin123';
 
         const existingAdmin = await User.findOne({ email: adminEmail });
         console.log('Existing admin:', existingAdmin);
@@ -24,8 +24,8 @@ async function createFirstAdmin() {
             email: adminEmail,
             password: hashedPassword,
             role: 'admin',
-            firstName: 'Admin',
-            lastName: 'User'
+            firstName: 'Support',
+            lastName: 'Admin'
         });
 
         await admin.save();

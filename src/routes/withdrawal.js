@@ -10,6 +10,7 @@ router.post('/request', authMiddleware, async (req, res) => {
     try {
         const { amount, currency, withdrawalAddress } = req.body;
 
+        // Check required fields
         if (!amount || !currency || !withdrawalAddress) {
             return res.status(400).json({ error: 'All fields are required' });
         }
@@ -21,7 +22,7 @@ router.post('/request', authMiddleware, async (req, res) => {
         }
 
         const currencyUpper = currency.toUpperCase();
-        const networkFee = currencyUpper === 'BTC' ? 0.00011 : 0; // BTC network fee
+        const networkFee = 1; // USDT network fee
         const totalAmount = Number(amount) + networkFee;
 
         // Check if user has enough balance
