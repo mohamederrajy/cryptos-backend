@@ -9,12 +9,14 @@ const app = express();
 // Set strictQuery to false to prepare for Mongoose 7
 mongoose.set('strictQuery', false);
 
-// Update CORS configuration to allow port 4173
+// Update CORS configuration to allow all origins
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:4173'], // Added 4173
-    credentials: true, // Allow credentials
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+    origin: function(origin, callback) {
+        callback(null, true); // allow all origins
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Middleware

@@ -55,14 +55,43 @@ router.post('/signup', [
 
         await user.save();
 
+        // Generate token
+        const token = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // Generate refresh token
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
         res.status(201).json({
             message: 'User created successfully',
-            userId: user._id,
+            token,
+            refreshToken,
             user: {
                 id: user._id,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                email: user.email
+                email: user.email,
+                role: user.role,
+                status: user.status,
+                isAdmin: user.role === 'admin',
+                wallet: {
+                    totalBalance: {
+                        USDT: user.wallet.totalBalance.USDT || 0
+                    },
+                    assetBalance: {
+                        USDT: user.wallet.assetBalance.USDT || 0
+                    },
+                    exchangeBalance: {
+                        USDT: user.wallet.exchangeBalance.USDT || 0
+                    }
+                }
             }
         });
 
