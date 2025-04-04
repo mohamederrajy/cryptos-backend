@@ -18,8 +18,8 @@ router.post('/signup', [
         .withMessage('Last name is required'),
     body('email').isEmail().normalizeEmail(),
     body('password')
-        .isLength({ min: 8 })
-        .matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/),
+        .exists()
+        .withMessage('Password is required'),
     body('confirmPassword').custom((value, { req }) => {
         if (value !== req.body.password) {
             throw new Error('Password confirmation does not match password');
